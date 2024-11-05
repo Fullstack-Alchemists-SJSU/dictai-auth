@@ -1,7 +1,8 @@
-import {CognitoUserAttribute} from "amazon-cognito-identity-js"
-import {RequestHandler} from "express"
-import cognitoUserPool from "../config/cognito"
-import attribute from "../utils/attribute"
+import {secretHash, signUpMethod} from "../config/cognito"
+import {
+	SignUpCommandOutput,
+	AttributeType,
+} from "@aws-sdk/client-cognito-identity-provider"
 
 export const signup = (req: any, res: any) => {
 	const {
@@ -25,25 +26,20 @@ export const signup = (req: any, res: any) => {
 		res.status(400).json({message: "Insufficient data"})
 	}
 
-	const attributes = [
-		attribute("given_name", givenName),
-		attribute("family_name", lastName),
-		attribute("email", email),
-		attribute("phone_number", phoneNumber),
-		attribute("gender", gender),
-		attribute("birthdate", birthdate),
+	const attributes: AttributeType[] = [
+		{Name: "given_name", Value: givenName},
+		{Name: "family_name", Value: lastName},
+		{Name: "email", Value: email},
+		{Name: "phone_number", Value: phoneNumber},
+		{Name: "gender", Value: gender},
+		{Name: "birthdate", Value: birthdate},
 	]
 
-	const cognitoAttributeList = attributes.map(
-		(attribute) => new CognitoUserAttribute(attribute)
-	)
-
-	cognitoUserPool.signUp(
+	signUpMethod(
 		email,
 		password,
-		cognitoAttributeList,
-		[],
-		(err, data) => {
+		attributes,
+		(err: any, data?: SignUpCommandOutput) => {
 			if (err) {
 				console.log(err)
 				res.status(500).json({message: "Something went wrong"})
@@ -51,7 +47,7 @@ export const signup = (req: any, res: any) => {
 
 			if (data) {
 				res.status(201).json({
-					userConfirmed: data.userConfirmed,
+					userSub: data.UserSub,
 				})
 			}
 		}
