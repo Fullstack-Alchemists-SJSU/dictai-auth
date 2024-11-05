@@ -18,10 +18,16 @@
 	"homepage": "https://github.com/Fullstack-Alchemists-SJSU/dictai-auth#readme",
 	"description": "",
 	"dependencies": {
+		"@aws-sdk/client-cognito-identity": "^3.685.0",
+		"@types/cors": "^2.8.17",
 		"@types/dotenv": "^6.1.1",
 		"@types/express": "^5.0.0",
+		"amazon-cognito-identity-js": "^6.3.12",
+		"axios": "^1.7.7",
+		"cors": "^2.8.5",
 		"dotenv": "^16.4.5",
-		"express": "^4.21.1"
+		"express": "^4.21.1",
+		"jwk-to-pem": "^2.0.6"
 	},
 	"devDependencies": {
 		"nodemon": "^3.1.7"
