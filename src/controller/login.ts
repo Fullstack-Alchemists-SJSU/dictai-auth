@@ -5,16 +5,19 @@ import {
 	TokenErrors,
 	verifyToken,
 } from "../config/cognito"
+import {decodePasswordFromHeader} from "../utils/password"
 
 const login = async (req: any, res: any) => {
-	const {email, password} = req.body
+	const {email} = req.body
 
-	if (!email || !password) {
+	if (!email || !req.headers || !req.headers.password) {
 		res.status(400).json({message: "Insufficient data"})
 	}
 
 	try {
-		const result = await signInMethod(email, password)
+		const {password} = req.headers
+		const decodedPassword = decodePasswordFromHeader(password)
+		const result = await signInMethod(email, decodedPassword)
 		res.status(200).json(result)
 	} catch (e: any) {
 		console.log("error: ", e)

@@ -2,18 +2,13 @@ import {secretHash, signUpMethod} from "../config/cognito"
 import {
 	SignUpCommandOutput,
 	AttributeType,
+	UsernameExistsException,
 } from "@aws-sdk/client-cognito-identity-provider"
+import {decodePasswordFromHeader} from "../utils/password"
 
 export const signup = (req: any, res: any) => {
-	const {
-		givenName,
-		lastName,
-		email,
-		phoneNumber,
-		birthdate,
-		gender,
-		password,
-	} = req.body
+	const {givenName, lastName, email, phoneNumber, birthdate, gender} =
+		req.body
 
 	if (
 		!givenName ||
@@ -21,10 +16,15 @@ export const signup = (req: any, res: any) => {
 		!email ||
 		!phoneNumber ||
 		!birthdate ||
-		!gender
+		!gender ||
+		!req.headers ||
+		!req.headers.password
 	) {
 		res.status(400).json({message: "Insufficient data"})
 	}
+
+	const {password} = req.headers
+	const decodedPassword = decodePasswordFromHeader(password)
 
 	const attributes: AttributeType[] = [
 		{Name: "given_name", Value: givenName},
@@ -37,11 +37,16 @@ export const signup = (req: any, res: any) => {
 
 	signUpMethod(
 		email,
-		password,
+		decodedPassword,
 		attributes,
 		(err: any, data?: SignUpCommandOutput) => {
 			if (err) {
 				console.log(err)
+				if (err instanceof UsernameExistsException) {
+					res.status(400).json({
+						message: "User with this email already exists",
+					})
+				}
 				res.status(500).json({message: "Something went wrong"})
 			}
 
