@@ -15,3 +15,5 @@ dist
 
 # key files
 jwks.ts
+
+steps.txt

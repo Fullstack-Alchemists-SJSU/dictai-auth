@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: dictai-auth-deployment
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            app: dictai-auth
+    template:
+        metadata:
+            labels:
+                app: dictai-auth
+        spec:
+            containers:
+                - name: dictai-auth-container
+                  image: dictai-auth:1.0.0
+                  ports:
+                      - containerPort: 3300
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+    name: dictai-auth-service
+spec:
+    selector:
+        app: dictai-auth
+    ports:
+        - protocol: TCP
+          port: 80
+          targetPort: 3300
+    externalIPs:
+        - 192.168.1.152
+    type: ClusterIP
