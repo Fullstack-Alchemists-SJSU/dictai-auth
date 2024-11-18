@@ -1,24 +1,49 @@
 import {NotAuthorizedException} from "@aws-sdk/client-cognito-identity-provider"
 import {
+	Attributes,
 	refreshMethod,
 	signInMethod,
 	TokenErrors,
 	verifyToken,
 } from "../config/cognito"
 import {decodePasswordFromHeader} from "../utils/password"
+import {decode} from "jsonwebtoken"
 
 const login = async (req: any, res: any) => {
-	const {email} = req.body
+	const emailReq = req.body.email
 
-	if (!email || !req.headers || !req.headers.password) {
+	if (!emailReq || !req.headers || !req.headers.password) {
 		res.status(400).json({message: "Insufficient data"})
 	}
 
 	try {
 		const {password} = req.headers
 		const decodedPassword = decodePasswordFromHeader(password)
-		const result = await signInMethod(email, decodedPassword)
-		res.status(200).json(result)
+		const authResult = await signInMethod(emailReq, decodedPassword)
+		const {
+			email,
+			sub,
+			birthdate,
+			gender,
+			given_name,
+			family_name,
+			phone_number,
+		} = decode(authResult.AuthenticationResult?.IdToken ?? "") as Attributes
+
+		const response = {
+			$metadata: authResult.$metadata,
+			AuthenticationResult: authResult.AuthenticationResult,
+			Attributes: {
+				email,
+				sub,
+				birthdate,
+				gender,
+				given_name,
+				family_name,
+				phone_number,
+			},
+		}
+		res.status(200).json(response)
 	} catch (e: any) {
 		console.log("error: ", e)
 		res.status(500).json({message: "Something went wrong"})
@@ -43,14 +68,14 @@ export const verify = (req: any, res: any) => {
 }
 
 export const refresh = async (req: any, res: any) => {
-	const {userSub} = req.body
+	const {sub} = req.body
 	const refreshToken = req.headers.authorization
-	if (!userSub || !refreshToken) {
+	if (!sub || !refreshToken) {
 		res.status(400).json({message: "Insufficient data"})
 	}
 
 	try {
-		const result = await refreshMethod(userSub, refreshToken)
+		const result = await refreshMethod(sub, refreshToken)
 		res.status(200).json(result)
 	} catch (e: any) {
 		console.log(e)

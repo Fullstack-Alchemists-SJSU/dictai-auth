@@ -14,7 +14,7 @@ spec:
         spec:
             containers:
                 - name: dictai-auth-container
-                  image: dictai-auth:1.0.0
+                  image: dictai-auth:1.0.1
                   ports:
                       - containerPort: 3300
 
@@ -31,5 +31,6 @@ spec:
           port: 80
           targetPort: 3300
     externalIPs:
-        - 192.168.1.152
+        # - 172.27.32.1
+        - 192.168.1.124
     type: ClusterIP

@@ -30,6 +30,16 @@ export enum TokenErrors {
 	INVALID_CLAIM = "Invalid claim",
 }
 
+export interface Attributes {
+	sub: string
+	birthdate: string
+	gender: string
+	given_name: string
+	phone_number: string
+	family_name: string
+	email: string
+}
+
 const COGNITO_JWKS_ISSUER = `https://cognito-idp.us-east-1.amazonaws.com/${process.env.COGNITO_USER_POOL_ID}`
 
 const getPublicKeys = async () => {
@@ -82,11 +92,12 @@ export const signInMethod = (email: string, password: string) => {
 }
 
 export const refreshMethod = (userSub: string, refreshToken: string) => {
+	const secret = secretHash(userSub)
 	return cognitoISP.initiateAuth({
 		AuthFlow: "REFRESH_TOKEN_AUTH",
 		AuthParameters: {
 			REFRESH_TOKEN: refreshToken,
-			SECRET_HASH: secretHash(userSub),
+			SECRET_HASH: secret,
 		},
 		ClientId: process.env.COGNITO_CLIENT_ID,
 	})
