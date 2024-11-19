@@ -1,4 +1,4 @@
-import {secretHash, signUpMethod} from "../config/cognito"
+import {signUpMethod} from "../config/cognito"
 import {
 	SignUpCommandOutput,
 	AttributeType,
@@ -52,7 +52,7 @@ export const signup = (req: any, res: any) => {
 
 			if (data) {
 				res.status(201).json({
-					userSub: data.UserSub,
+					message: "Registration successful",
 				})
 			}
 		}
