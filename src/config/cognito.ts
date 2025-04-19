@@ -40,8 +40,8 @@ export interface Attributes {
 	email: string
 }
 
-const COGNITO_JWKS_ISSUER = `https://cognito-idp.us-east-1.amazonaws.com/${process.env.COGNITO_USER_POOL_ID}`
-
+//const COGNITO_JWKS_ISSUER = `https://cognito-idp.us-east-1.amazonaws.com/${process.env.COGNITO_USER_POOL_ID}`
+const COGNITO_JWKS_ISSUER = `https://cognito-idp.us-east-1.amazonaws.com/us-east-1_wg8GO6epi/.well-known/jwks.json`
 const getPublicKeys = async () => {
 	const url = `${COGNITO_JWKS_ISSUER}/.well-known/jwks.json`
 	const publicKeys = await axios.get(url)
@@ -74,7 +74,7 @@ export const signUpMethod = (
 			Password: password,
 			UserAttributes: userAttributes,
 			ClientId: process.env.COGNITO_CLIENT_ID,
-			SecretHash: secretHash(email),
+			//SecretHash: secretHash(email),
 		},
 		callback
 	)
@@ -85,19 +85,19 @@ export const signInMethod = (email: string, password: string) => {
 		AuthParameters: {
 			USERNAME: email,
 			PASSWORD: password,
-			SECRET_HASH: secretHash(email),
+			//SECRET_HASH: secretHash(email),
 		},
 		ClientId: process.env.COGNITO_CLIENT_ID,
 	})
 }
 
 export const refreshMethod = (userSub: string, refreshToken: string) => {
-	const secret = secretHash(userSub)
+	//const secret = secretHash(userSub)
 	return cognitoISP.initiateAuth({
 		AuthFlow: "REFRESH_TOKEN_AUTH",
 		AuthParameters: {
 			REFRESH_TOKEN: refreshToken,
-			SECRET_HASH: secret,
+			//SECRET_HASH: secret,
 		},
 		ClientId: process.env.COGNITO_CLIENT_ID,
 	})
