@@ -52,19 +52,16 @@ const login = async (req: any, res: any) => {
 }
 
 export const verify = (req: any, res: any) => {
-	console.log("verify req: ", req.headers.authorization.split(" ")[1])
 	verifyToken(
 		req.headers.authorization.split(" ")[1],
 		(err: TokenErrors | null, data: any) => {
 			if (err) {
-				console.log("verify err: ", err)
 				if (err == TokenErrors.TOKEN_EXPIRED) {
 					res.status(401).json({message: err})
 				} else {
 					res.status(403).json({message: err})
 				}
 			} else {
-				console.log("verify data: ", data)
 				res.status(200).json({message: "Token verified"})
 			}
 		}
@@ -91,7 +88,6 @@ export const refresh = async (req: any, res: any) => {
 }
 
 export const logout = async (req: any, res: any) => {
-	console.log("logout req: ", req.headers.authorization.split(" ")[1])
     if (!req.headers.authorization) {
         return res.status(400).json({ message: "Access token is required" });
     }
@@ -103,7 +99,6 @@ export const logout = async (req: any, res: any) => {
             if (err) {
                 res.status(500).json(data)
             } else {
-				console.log("data: ", data)
                 res.status(200).json(data)
             }
         })
