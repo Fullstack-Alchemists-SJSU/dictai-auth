@@ -1,6 +1,7 @@
 import {NotAuthorizedException} from "@aws-sdk/client-cognito-identity-provider"
 import {
 	Attributes,
+	logoutMethod,
 	refreshMethod,
 	signInMethod,
 	TokenErrors,
@@ -51,16 +52,19 @@ const login = async (req: any, res: any) => {
 }
 
 export const verify = (req: any, res: any) => {
+	console.log("verify req: ", req.headers.authorization.split(" ")[1])
 	verifyToken(
 		req.headers.authorization.split(" ")[1],
 		(err: TokenErrors | null, data: any) => {
 			if (err) {
+				console.log("verify err: ", err)
 				if (err == TokenErrors.TOKEN_EXPIRED) {
 					res.status(401).json({message: err})
 				} else {
 					res.status(403).json({message: err})
 				}
 			} else {
+				console.log("verify data: ", data)
 				res.status(200).json({message: "Token verified"})
 			}
 		}
@@ -75,7 +79,7 @@ export const refresh = async (req: any, res: any) => {
 	}
 
 	try {
-		const result = await refreshMethod(sub, refreshToken)
+		const result = await refreshMethod(refreshToken)
 		res.status(200).json(result)
 	} catch (e: any) {
 		console.log(e)
@@ -85,5 +89,29 @@ export const refresh = async (req: any, res: any) => {
 		res.status(500).json({message: "Something went wrong"})
 	}
 }
+
+export const logout = async (req: any, res: any) => {
+	console.log("logout req: ", req.headers.authorization.split(" ")[1])
+    if (!req.headers.authorization) {
+        return res.status(400).json({ message: "Access token is required" });
+    }
+
+    try {
+        const accessToken = req.headers.authorization.split(" ")[1];
+        
+        logoutMethod(accessToken, (err: any, data?: any) => {
+            if (err) {
+                res.status(500).json(data)
+            } else {
+				console.log("data: ", data)
+                res.status(200).json(data)
+            }
+        })
+    } catch (e: any) {
+        console.log("error: ", e)
+        res.status(500).json({message: "Something went wrong"})
+    }
+}	
+
 
 export default login

@@ -1,11 +1,12 @@
 import {Express, Router} from "express"
 import {signup} from "./controller/registration"
-import login, {refresh, verify} from "./controller/login"
+import login, {logout, refresh, verify} from "./controller/login"
 const router = (app: Express) => {
 	const authRouter = Router()
 
 	authRouter.post("/register", signup)
 	authRouter.post("/login", login)
+	authRouter.post("/logout", logout)
 
 	authRouter.post("/verify", verify)
 	authRouter.post("/refresh", refresh)

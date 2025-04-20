@@ -1,27 +1,12 @@
-import {createHmac} from "crypto"
 import {
 	AttributeType,
 	CognitoIdentityProvider,
+	GlobalSignOutCommand,
 	SignUpCommandOutput,
 } from "@aws-sdk/client-cognito-identity-provider"
-import jwt, {TokenExpiredError} from "jsonwebtoken"
-import jwkToPem from "jwk-to-pem"
-import axios from "axios"
+import {TokenExpiredError} from "jsonwebtoken"
+import { CognitoJwtVerifier } from "aws-jwt-verify"
 require("dotenv").config()
-
-interface TokenHeader {
-	kid: string
-	alg: string
-}
-
-interface Claim {
-	token_use: string
-	auth_time: number
-	iss: string
-	exp: number
-	username: string
-	client_id: string
-}
 
 export enum TokenErrors {
 	TOKEN_EXPIRED = "Token expired",
@@ -40,27 +25,17 @@ export interface Attributes {
 	email: string
 }
 
-//const COGNITO_JWKS_ISSUER = `https://cognito-idp.us-east-1.amazonaws.com/${process.env.COGNITO_USER_POOL_ID}`
 const COGNITO_JWKS_ISSUER = `https://cognito-idp.us-east-1.amazonaws.com/us-east-1_wg8GO6epi/.well-known/jwks.json`
-const getPublicKeys = async () => {
-	const url = `${COGNITO_JWKS_ISSUER}/.well-known/jwks.json`
-	const publicKeys = await axios.get(url)
-	const cacheKeys = publicKeys.data.keys.reduce((agg: any, current: any) => {
-		const pem = jwkToPem(current)
-		agg[current.kid] = {instance: current, pem}
-		return agg
-	}, {} as any)
-	return cacheKeys
-}
 
 const cognitoISP = new CognitoIdentityProvider({
 	region: "us-east-1",
 })
 
-export const secretHash = (username: string) =>
-	createHmac("sha256", process.env.COGNITO_SECRET as string)
-		.update(`${username}${process.env.COGNITO_CLIENT_ID}`)
-		.digest("base64")
+const jwtVerifier = CognitoJwtVerifier.create({
+	userPoolId: process.env.COGNITO_USER_POOL_ID as string,
+	tokenUse: "access",
+	issuer: COGNITO_JWKS_ISSUER,
+})
 
 export const signUpMethod = (
 	email: string,
@@ -74,7 +49,6 @@ export const signUpMethod = (
 			Password: password,
 			UserAttributes: userAttributes,
 			ClientId: process.env.COGNITO_CLIENT_ID,
-			//SecretHash: secretHash(email),
 		},
 		callback
 	)
@@ -85,19 +59,16 @@ export const signInMethod = (email: string, password: string) => {
 		AuthParameters: {
 			USERNAME: email,
 			PASSWORD: password,
-			//SECRET_HASH: secretHash(email),
 		},
 		ClientId: process.env.COGNITO_CLIENT_ID,
 	})
 }
 
-export const refreshMethod = (userSub: string, refreshToken: string) => {
-	//const secret = secretHash(userSub)
+export const refreshMethod = (refreshToken: string) => {
 	return cognitoISP.initiateAuth({
 		AuthFlow: "REFRESH_TOKEN_AUTH",
 		AuthParameters: {
 			REFRESH_TOKEN: refreshToken,
-			//SECRET_HASH: secret,
 		},
 		ClientId: process.env.COGNITO_CLIENT_ID,
 	})
@@ -107,36 +78,41 @@ export const verifyToken = async (
 	token: string,
 	callback: (err: TokenErrors | null, data: any) => void
 ) => {
-	const tokenSections = token.split(".")
-	if (tokenSections.length < 2) {
+	
+	if(!token){
 		callback(TokenErrors.INVALID_TOKEN, null)
-	}
-
-	const headerJSON = Buffer.from(tokenSections[0], "base64").toString("utf8")
-	const header = JSON.parse(headerJSON) as TokenHeader
-	const keys = await getPublicKeys()
-	const matchingKey = keys[header.kid]
-
-	if (matchingKey === undefined) {
-		callback(TokenErrors.INVALID_TOKEN, null)
-	}
-
-	try {
-		const claim = jwt.verify(token, matchingKey.pem) as Claim
-		const currentSeconds = Math.floor(new Date().valueOf() / 1000)
-		if (currentSeconds > claim.exp || currentSeconds < claim.auth_time) {
-			callback(TokenErrors.INVALID_CLAIM, null)
-		}
-		if (claim.iss !== COGNITO_JWKS_ISSUER) {
-			callback(TokenErrors.INVALID_ISSUER, null)
-		}
-		if (claim.token_use !== "access") {
-			callback(TokenErrors.INVALID_TOKEN, null)
-		}
-		callback(null, claim)
-	} catch (e: any) {
-		if (e instanceof TokenExpiredError) {
-			callback(TokenErrors.TOKEN_EXPIRED, null)
+	}else{
+		try{
+			const result = await jwtVerifier.verify(token, {
+				clientId: process.env.COGNITO_CLIENT_ID as string,
+			})
+			callback(null, result)
+		}catch(e: any){
+			if(e instanceof TokenExpiredError){
+				callback(TokenErrors.TOKEN_EXPIRED, null)
+			}else{
+				callback(TokenErrors.INVALID_TOKEN, null)
+			}	
 		}
 	}
+}
+
+export const logoutMethod = async (accessToken: string, callback: (err: any, data?: any) => void) => {
+    if (!accessToken) {
+        callback(new Error("Access token is required"), null);
+        return;
+    }
+
+    try {
+        const signOutResult = await cognitoISP.globalSignOut({
+            AccessToken: accessToken
+        })
+        callback(null, { message: 'User was already logged out', statusCode: 200 });
+    } catch(e: any) {
+        if (e.name === 'NotAuthorizedException' && e.message.includes('Access Token has been revoked')) {
+            callback(null, { message: 'User was already logged out', statusCode: 200 });
+        } else {
+            callback(e, null);
+        }
+    }
 }
